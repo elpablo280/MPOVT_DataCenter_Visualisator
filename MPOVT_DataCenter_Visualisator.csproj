@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+	  <ServerGarbageCollection>true</ServerGarbageCollection>
+    <UserSecretsId>dotnet-MPOVT_DataCenter_Visualisator-079eeaf6-bad5-4c45-9978-cc9f1a82aac8</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.104.2" />
+    <PackageReference Include="ClosedXML.Report" Version="0.2.11" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.5" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="Quartz" Version="3.14.0" />
+  </ItemGroup>
+</Project>
