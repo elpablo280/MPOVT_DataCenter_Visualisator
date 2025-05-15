@@ -1,43 +1,60 @@
-using MPOVT_DataCenter_Visualisator.Jobs;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using MPOVT_DataCenter_Visualisator;
 using MPOVT_DataCenter_Visualisator.Workers;
-using Quartz.Spi;
 using Serilog;
+using Quartz.Impl;
+using Quartz;
+using MPOVT_DataCenter_Visualisator.Models;
+using MPOVT_DataCenter_Visualisator.Jobs;
 
-namespace MPOVT_DataCenter_Visualisator
+public class Program
 {
-    public class Program
+    public static void Main(string[] args)
     {
-        public static void Main(string[] args)
+        ConfigWorker cw = new();
+        var config = cw.GetConfig();
+
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Information()
+            .WriteTo.Console()
+            .WriteTo.File(config.LogsFilepath, rollingInterval: RollingInterval.Day)
+            .CreateLogger();
+
+        try
         {
-            var cw = new ConfigWorker();
-            var config = cw.GetConfig();
-
-            Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Information()
-                .WriteTo.Console()
-                .WriteTo.File(config.LogsFilepath, rollingInterval: RollingInterval.Day)
-                .CreateLogger();
-            try
-            {
-                Log.Information("Starting up the Worker Service");
-                CreateHostBuilder(args).Build().Run();
-            }
-            catch (Exception ex)
-            {
-                Log.Fatal(ex, "Application start-up failed");
-            }
-            finally
-            {
-                Log.CloseAndFlush();
-            }
+            Log.Information("Starting up the host");
+            CreateHostBuilder(args, config).Build().Run();
         }
-
-        public static IHostBuilder CreateHostBuilder(string[] args) =>
-            Host.CreateDefaultBuilder(args)
-                .UseSerilog()
-                .ConfigureServices((hostContext, services) => { 
-                    services.AddHostedService<Worker>();
-                    services.AddSingleton<MainJob>();
-                });
+        catch (Exception ex)
+        {
+            Log.Fatal(ex, "Application start-up failed");
+        }
+        finally
+        {
+            Log.CloseAndFlush();
+        }
     }
+
+    public static IHostBuilder CreateHostBuilder(string[] args, Config config) =>
+        Host.CreateDefaultBuilder(args)
+            .UseSerilog() // Используем Serilog
+            .ConfigureServices((hostContext, services) =>
+            {
+                services.AddQuartz(q =>
+                {
+                    q.UseMicrosoftDependencyInjectionJobFactory();
+
+                    // Создаем задачу
+                    var jobKey = new JobKey("MainJob");
+                    q.AddJob<MainJob>(opts => opts.WithIdentity(jobKey));
+
+                    // Создаем триггер
+                    q.AddTrigger(opts => opts
+                        .ForJob(jobKey)
+                        .WithIdentity("MainJob-trigger")
+                        .WithCronSchedule(config.CronExpression));
+                });
+                services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
+            });
 }

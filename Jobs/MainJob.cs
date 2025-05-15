@@ -17,15 +17,11 @@ namespace MPOVT_DataCenter_Visualisator.Jobs
             _logger = logger;
         }
 
-        //public MainJob()
-        //{
-
-        //}
-
         public Task Execute(IJobExecutionContext context)
         {
-            //ILogger<MainJob> _logger;
-            // Логика вашей задачи
+
+
+
             _logger.LogInformation("Задача выполнена в: {time}", DateTime.Now);
             return Task.CompletedTask;
         }
