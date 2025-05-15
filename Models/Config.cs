@@ -8,7 +8,11 @@ namespace MPOVT_DataCenter_Visualisator.Models
 {
     public class Config
     {
-        public required string LogsFilepath { get; set; }
+        public string LogsFilepath { get; set; }
+        public string DataCenterFolderpath { get; set; }
+        public string ProductionMonitoringFilepath { get; set; }
+        public string CronExpression { get; set; }
+
 
 
 
