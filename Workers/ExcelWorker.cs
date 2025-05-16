@@ -37,42 +37,20 @@ namespace MPOVT_DataCenter_Visualisator.Workers
 
                     ws.CollapseRows();
                     ws.CollapseColumns();
-                    List<Product> products = new();
+                    List<GeneralInfo> GeneralInfoList = new();
+                    List<Product> Products = new();
+                    List<CompletionByPeriod> CompletionByPeriodList = new();
                     try
                     {
-                        products = GetProducts(ws, 31, 204);
-
+                        GeneralInfoList = GetGeneralInfo(ws, 5, 25);
+                        Products = GetProducts(ws, 31, 204);
+                        CompletionByPeriodList = GetCompletionByPeriod(ws, 209, 234);
                     }
                     catch (Exception ex)
                     {
+
                     }
 
-                    IXLCell startCell = ws.Cell("B5");
-                    IXLCell endCell = ws.Cell("G22");
-                    List<GeneralInfo> generals = [];
-                    int startRow = 5;
-                    int endRow = 25;
-                    int startRow1 = 26;
-                    int endRow1 = 204;
-                    for (int i = startRow; i <= endRow; i++)
-                    {
-                        
-                        var value1 = ws.Cell("B" + i).GetString();
-                        var value2 = ws.Cell("E" + i).GetString();
-                        var value3 = ws.Cell("F" + i).GetString();
-                        var value4 = ws.Cell("G" + i).GetString();
-                        GeneralInfo generalInfo = new GeneralInfo(
-                            ws.Cell("B" + i).GetString(),
-                            Math.Round(Convert.ToDouble(ws.Cell("E" + i).GetString()), 2),
-                            Math.Round(Convert.ToDouble(ws.Cell("F" + i).GetString()), 2),
-                            ws.Cell("G" + i).GetString()
-                            );
-                        generals.Add(generalInfo);
-                    }
-
-                    // Получаем количество строк и столбцов
-                    int rowCount = ws.LastRowUsed().RowNumber();
-                    int columnCount = ws.LastColumnUsed().ColumnNumber();
                 }
             }
             else
@@ -81,52 +59,108 @@ namespace MPOVT_DataCenter_Visualisator.Workers
             }
         }
 
-        public List<Product> GetProducts(IXLWorksheet ws, int startRow, int endRow)
+        private string GetPlanCompletionString(IXLCell cell)
         {
-            List<Product> Products = new List<Product>();
-            string name;
-            int? planNumber;
-            decimal planPrice;
-            decimal totalPlanMoney;
-            int? factNumber;
-            decimal totalFactMoney;
+            // пытаемся взять planCompletionPercentage точно в таком же виде, в каком он отображается в отчёте
+            bool IsPercentageDecimal = true;
             string? planCompletionPercentage;
-            string? type;
-            int? plan;
-            int? fact;
-            int? totalPlanByToday;
-            int? totalFactByToday;
-            int? planDeviation;
+            if (!cell.TryGetValue(out decimal planCompletionPercentageDecimal))
+            {
+                IsPercentageDecimal = false;
+                cell.TryGetValue(out planCompletionPercentage);
+            }
+            else
+            {
+                planCompletionPercentage = Math.Round(planCompletionPercentageDecimal * 100, 1).ToString() + "%";
+            }
+            return planCompletionPercentage;
+        }
+
+        private List<GeneralInfo> GetGeneralInfo(IXLWorksheet ws, int startRow, int endRow)
+        {
+            List<GeneralInfo> GeneralInfoList = new();
             for (int i = startRow; i <= endRow; i++)
             {
-                ws.Cell("B" + i).TryGetValue(out name);
-                ws.Cell("C" + i).TryGetValue(out planNumber);
-                ws.Cell("D" + i).TryGetValue(out planPrice);
-                ws.Cell("E" + i).TryGetValue(out totalPlanMoney);
-                ws.Cell("F" + i).TryGetValue(out factNumber);
-                ws.Cell("G" + i).TryGetValue(out totalFactMoney);
-                ws.Cell("H" + i).TryGetValue(out planCompletionPercentage);
-                ws.Cell("I" + i).TryGetValue(out type);
-                ws.Cell("AJ" + i).TryGetValue(out plan);
-                ws.Cell("AK" + i).TryGetValue(out fact);
-                ws.Cell("BT" + i).TryGetValue(out totalPlanByToday);
-                ws.Cell("BU" + i).TryGetValue(out totalFactByToday);
-                ws.Cell("BV" + i).TryGetValue(out planDeviation);
+                ws.Cell("B" + i).TryGetValue(out string name);
+                ws.Cell("E" + i).TryGetValue(out decimal planValue);
+                ws.Cell("F" + i).TryGetValue(out decimal factValue);
+                string? planCompletionPercentage = GetPlanCompletionString(ws.Cell("G" + i));
 
-                Product product = new(
-                    name,
-                    planNumber,
-                    Math.Round(planPrice, 2),
-                    Math.Round(totalPlanMoney, 2),
-                    factNumber,
-                    Math.Round(totalFactMoney, 2),
-                    planCompletionPercentage,
-                    type,
-                    plan,
-                    fact,
-                    totalPlanByToday,
-                    totalFactByToday,
-                    planDeviation);
+                GeneralInfo generalInfo = new()
+                {
+                    Name = name,
+                    PlanValue = Math.Round(planValue, 2),
+                    FactValue = Math.Round(factValue, 2),
+                    PlanCompletionPercentage = planCompletionPercentage,
+                };
+                GeneralInfoList.Add(generalInfo);
+            }
+
+            return GeneralInfoList;
+        }
+
+        private List<CompletionByPeriod> GetCompletionByPeriod(IXLWorksheet ws, int startRow, int endRow)
+        {
+            List<CompletionByPeriod> CompletionByPeriodList = new();
+            for (int i = startRow; i <= endRow; i++)
+            {
+                ws.Cell("B" + i).TryGetValue(out string periodName);
+                ws.Cell("C" + i).TryGetValue(out decimal currentYear);
+                ws.Cell("D" + i).TryGetValue(out decimal previousYear);
+                string? growthPercentage = GetPlanCompletionString(ws.Cell("E" + i));
+                ws.Cell("F" + i).TryGetValue(out decimal bPCompletion);
+                string? bPCompletionPercentage = GetPlanCompletionString(ws.Cell("G" + i));
+
+                CompletionByPeriod completionByPeriod = new()
+                {
+                    PeriodName = periodName,
+                    CurrentYear = currentYear,
+                    PreviousYear = previousYear,
+                    GrowthPercentage = growthPercentage,
+                    BPCompletion = bPCompletion,
+                    BPCompletionPercentage = bPCompletionPercentage
+                };
+                CompletionByPeriodList.Add(completionByPeriod);
+            }
+
+            return CompletionByPeriodList;
+        }
+
+        private List<Product> GetProducts(IXLWorksheet ws, int startRow, int endRow)
+        {
+            List<Product> Products = new();
+            for (int i = startRow; i <= endRow; i++)
+            {
+                ws.Cell("B" + i).TryGetValue(out string name);
+                ws.Cell("C" + i).TryGetValue(out int? planNumber);
+                ws.Cell("D" + i).TryGetValue(out decimal planPrice);
+                ws.Cell("E" + i).TryGetValue(out decimal totalPlanMoney);
+                ws.Cell("F" + i).TryGetValue(out int? factNumber);
+                ws.Cell("G" + i).TryGetValue(out decimal totalFactMoney);
+                string? planCompletionPercentage = GetPlanCompletionString(ws.Cell("H" + i));
+                ws.Cell("I" + i).TryGetValue(out string? type);
+                ws.Cell("AJ" + i).TryGetValue(out int? plan);
+                ws.Cell("AK" + i).TryGetValue(out int? fact);
+                ws.Cell("BT" + i).TryGetValue(out int? totalPlanByToday);
+                ws.Cell("BU" + i).TryGetValue(out int? totalFactByToday);
+                ws.Cell("BV" + i).TryGetValue(out int? planDeviation);
+
+                Product product = new()
+                {
+                    Name = name,
+                    PlanNumber = planNumber,
+                    PlanPrice = Math.Round(planPrice, 2),
+                    TotalPlanMoney = Math.Round(totalPlanMoney, 2),
+                    FactNumber = factNumber,
+                    TotalFactMoney = Math.Round(totalFactMoney, 2),
+                    PlanCompletionPercentage = planCompletionPercentage,
+                    Type = type,
+                    Plan = plan,
+                    Fact = fact,
+                    TotalPlanByToday = totalPlanByToday,
+                    TotalFactByToday = totalFactByToday,
+                    PlanDeviation = planDeviation
+                };
                 Products.Add(product);
             }
 
