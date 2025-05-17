@@ -11,7 +11,7 @@ namespace MPOVT_DataCenter_Visualisator.Workers
     {
         public Config GetConfig()
         {
-            var config = Newtonsoft.Json.JsonConvert.DeserializeObject<Config>(File.ReadAllText("appsettings.json"));
+            Config? config = Newtonsoft.Json.JsonConvert.DeserializeObject<Config>(File.ReadAllText("appsettings.json"));
             if (config is not null)
             {
                 return config;
